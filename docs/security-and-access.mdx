@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Access Control
 
-WhenDan uses a role-based access control (RBAC) model to determine **who** (a team member) can do **what** (a permission) on **which resource** (packages, drivers, vehicles, etc.).
+Hikyaku uses a role-based access control (RBAC) model to determine **who** (a team member) can do **what** (a permission) on **which resource** (packages, drivers, vehicles, etc.).
 
 Access is enforced at two independent layers: the database rejects unauthorized reads and writes using row-level security policies, and the API rejects unauthorized requests using a permission guard before they reach the database. Both layers evaluate the same permission model.
 

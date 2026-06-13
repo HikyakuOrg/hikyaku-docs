@@ -8,7 +8,7 @@ import Heading from '@theme/Heading';
 
 import styles from './index.module.css';
 
-const GITHUB_URL = 'https://github.com/whendan-logistics/whendan';
+const GITHUB_URL = 'https://github.com/hikyakuorg';
 
 function ArrowIcon({size = 17}: {size?: number}) {
   return (
@@ -85,7 +85,7 @@ function RouteIcon() {
 
 function HomepageHero() {
   const {siteConfig} = useDocusaurusContext();
-  const runnerUrl = useBaseUrl('/img/whendan_icon.png');
+  const runnerUrl = useBaseUrl('/img/hikyaku_icon.png');
   return (
     <header className={styles.hero}>
       <div className={clsx('container', styles.heroGrid)}>

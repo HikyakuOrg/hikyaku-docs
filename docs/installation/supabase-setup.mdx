@@ -8,13 +8,13 @@ import InteractiveCheckbox from '@site/src/components/checkbox';
 
 # Supabase Setup
 
-Use this guide to bootstrap a fresh Supabase project for Whendan before starting the web frontend, scheduler, or server services.
+Use this guide to bootstrap a fresh Supabase project for Hikyaku before starting the web frontend, scheduler, or server services.
 
 ## Prerequisites
 
 - A Supabase account(either self hosted or on supabase.com)
 - Access to the local `schema` repository in this workspace
-- Your local or deployed Whendan app URLs
+- Your local or deployed Hikyaku app URLs
 
 ## Create a New Supabase Project
 
@@ -27,7 +27,7 @@ Use this guide to bootstrap a fresh Supabase project for Whendan before starting
    - service role key
    - database connection string or database password
 
-Whendan services use the same Supabase project for auth, storage, and the Postgres database, so keep these values available before moving on.
+Hikyaku services use the same Supabase project for auth, storage, and the Postgres database, so keep these values available before moving on.
 
 ## Bootstrap the Database Schema
 
@@ -55,7 +55,7 @@ If you prefer local tooling, run the same files in the same order with `psql` or
 
 ## Configure Auth Providers
 
-Whendan already uses Supabase Auth for email/password sign-in and password recovery, and it includes an OTP confirmation route that also supports magic-link style flows.
+Hikyaku already uses Supabase Auth for email/password sign-in and password recovery, and it includes an OTP confirmation route that also supports magic-link style flows.
 
 In **Authentication -> Providers -> Email**:
 
@@ -66,7 +66,7 @@ In **Authentication -> Providers -> Email**:
 In **Authentication -> URL Configuration**:
 
 1. Set **Site URL** to your active frontend origin, for example `http://localhost:3000` during local development.
-2. Add the Whendan auth callback URLs you expect to use, including:
+2. Add the Hikyaku auth callback URLs you expect to use, including:
    - `http://localhost:3000/auth/confirm`
    - `http://localhost:3000/auth/update-password`
 3. Add matching production URLs for your deployed frontend.

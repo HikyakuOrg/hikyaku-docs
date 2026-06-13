@@ -7,7 +7,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: 'Hikyaku Docs',
   tagline: 'The open operating system for delivery teams',
-  favicon: 'img/whendan_icon.png',
+  favicon: 'img/hikyaku_icon.png',
   markdown: {
     mermaid: true,
   },
@@ -88,7 +88,7 @@ const config: Config = {
       title: 'Hikyaku Docs',
       logo: {
         alt: 'Hikyaku runner logo',
-        src: 'img/whendan_icon.png',
+        src: 'img/hikyaku_icon.png',
       },
       items: [
         {
@@ -103,7 +103,7 @@ const config: Config = {
           position: 'left',
         },
         {
-          href: 'https://github.com/whendan-logistics/whendan',
+          href: 'https://github.com/hikyaku-logistics/hikyaku',
           label: 'GitHub',
           position: 'right',
         },

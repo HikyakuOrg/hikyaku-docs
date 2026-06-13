@@ -8,8 +8,8 @@ sidebar_position: 2
 
 The scheduler is a NestJS service that does two jobs:
 
-- proxies selected OpenRouteService and VROOM endpoints for the Whendan platform
-- runs the nightly route optimization job against the Whendan Postgres database
+- proxies selected OpenRouteService and VROOM endpoints for the Hikyaku platform
+- runs the nightly route optimization job against the Hikyaku Postgres database
 
 The service listens on port `3002` by default.
 
@@ -35,7 +35,7 @@ Set these variables before starting the service:
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `PORT` | No | HTTP port for the scheduler. Defaults to `3002`. |
-| `DB_URL` | Yes | Postgres connection string for the Whendan database. |
+| `DB_URL` | Yes | Postgres connection string for the Hikyaku database. |
 | `SUPABASE_URL` | Yes | Supabase project URL used to validate user tokens. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service-role key used by the auth guard. |
 | `ORS_BASE_URL` | No | Base URL for ORS-compatible endpoints. Defaults to `https://api.openrouteservice.org`. When using the bundled `ors-app` container, point this at that internal service URL. |
@@ -68,7 +68,7 @@ VROOM_BASE_URL=http://vroom:3000
 
 ## Install And Run Locally
 
-From the `whendan-scheduler` repository:
+From the `hikyaku-scheduler` repository:
 
 1. Install dependencies.
 2. Create `.env.local` or `.env` with the required values.
@@ -90,13 +90,13 @@ The scheduler will:
 
 The checked-in Compose file starts three services:
 
-- `scheduler` using `ghcr.io/whendan/whendan-scheduler:main`
+- `scheduler` using `ghcr.io/hikyaku/hikyaku-scheduler:main`
 - `vroom` using `ghcr.io/vroom-project/vroom-docker:v1.15.0`
 - `ors-app` using `openrouteservice/openrouteservice:v9.8.0`
 
 To run that stack:
 
-1. Create a `.env` file in `whendan-scheduler`.
+1. Create a `.env` file in `hikyaku-scheduler`.
 2. If the scheduler should talk to the bundled routing services, set `VROOM_BASE_URL=http://vroom:3000` and set `ORS_BASE_URL` to the internal ORS base URL exposed by `ors-app`.
 3. Prepare the mounted `vroom-conf`, `ors-docker`, and `graphs` directories on the host.
 4. Start the stack.
@@ -174,24 +174,24 @@ You can also call the ORS proxy health endpoint after startup:
 
 ```bash
 curl http://localhost:3002/v2/health \
-	-H "x-whendan: Bearer <supabase-access-token>"
+	-H "x-hikyaku: Bearer <supabase-access-token>"
 ```
 
 Notes:
 
-- the scheduler's API routes are protected by the custom `x-whendan` header
-- the token must be a valid Supabase access token for your Whendan project
+- the scheduler's API routes are protected by the custom `x-hikyaku` header
+- the token must be a valid Supabase access token for your Hikyaku project
 - when the scheduler runs inside Docker Compose, `localhost` refers to the scheduler container itself, not `vroom` or `ors-app`
 
 ## Database Notes
 
-The scheduler expects the main Whendan schema objects to exist, including warehouse, package, assignment, and `vrp_*` tables.
+The scheduler expects the main Hikyaku schema objects to exist, including warehouse, package, assignment, and `vrp_*` tables.
 It also reads timezone polygons from `tzdata.timezone`, which is present in `schema/schema.sql`.
 
 ## Troubleshooting
 
 - If the service exits on startup with a database error, verify `DB_URL` and confirm the schema has been loaded from the `schema` repository.
-- If authentication fails on proxy routes, verify `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and the access token passed in `x-whendan`.
+- If authentication fails on proxy routes, verify `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and the access token passed in `x-hikyaku`.
 - If scheduled optimizations fail, verify `ORS_API_KEY`, warehouse coordinates, vehicle assignments, and that pending packages exist in the database.
 - If `/optimization` fails in Docker Compose, verify `VROOM_BASE_URL` points to `http://vroom:3000` instead of `http://localhost:3000`.
 - If the bundled ORS or VROOM services fail to start, verify the `vroom-conf`, `ors-docker`, and `graphs` host directories exist and contain the required config or graph data.
