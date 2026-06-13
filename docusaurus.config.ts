@@ -98,12 +98,7 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          to: '/blog',
-          label: 'Blog',
-          position: 'left',
-        },
-        {
-          href: 'https://github.com/hikyaku-logistics/hikyaku',
+          href: 'https://github.com/hikyakuorg',
           label: 'GitHub',
           position: 'right',
         },
