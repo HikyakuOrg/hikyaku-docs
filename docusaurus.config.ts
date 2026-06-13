@@ -5,8 +5,8 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'WhenDan Docs',
-  tagline: 'Open source logistics operating system documentation',
+  title: 'Hikyaku Docs',
+  tagline: 'The open operating system for delivery teams',
   favicon: 'img/whendan_icon.png',
   markdown: {
     mermaid: true,
@@ -18,15 +18,13 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://whendan.com',
+  url: 'https://hikyaku.org',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'whendan-logistics',
-  projectName: 'whendan-docs',
 
   onBrokenLinks: 'throw',
 
@@ -37,6 +35,24 @@ const config: Config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
+
+  headTags: [
+    {
+      tagName: 'link',
+      attributes: { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossorigin: 'anonymous',
+      },
+    },
+  ],
+  stylesheets: [
+    'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap',
+  ],
 
   presets: [
     [
@@ -64,14 +80,14 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/social-card.png',
     colorMode: {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'WhenDan Docs',
+      title: 'Hikyaku Docs',
       logo: {
-        alt: 'WhenDan Logo',
+        alt: 'Hikyaku runner logo',
         src: 'img/whendan_icon.png',
       },
       items: [
@@ -80,6 +96,11 @@ const config: Config = {
           sidebarId: 'tutorialSidebar',
           position: 'left',
           label: 'Docs',
+        },
+        {
+          to: '/blog',
+          label: 'Blog',
+          position: 'left',
         },
         {
           href: 'https://github.com/whendan-logistics/whendan',
@@ -92,38 +113,37 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'The relay route',
           items: [
             {
-              label: 'Introduction',
+              label: 'Get started',
               to: '/docs/intro',
             },
-          ],
-        },
-        {
-          title: 'Product',
-          items: [
             {
-              label: 'Main App',
-              href: 'https://github.com/whendan-logistics/whendan',
+              label: 'Installation',
+              to: '/docs/installation/supabase-setup',
+            },
+            {
+              label: 'Dispatch & operations',
+              to: '/docs/dispatch-and-operations',
             },
           ],
         },
         {
-          title: 'More',
+          title: 'Community',
           items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
             {
               label: 'GitHub',
-              href: 'https://github.com/whendan-logistics/whendan',
+              href: 'https://github.com/Hikyakuorg/',
+            },
+            {
+              label: 'hello@hikyaku.org',
+              href: 'mailto:hello@hikyaku.org',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} WhenDan. Built with Docusaurus.`,
+      copyright: `© ${new Date().getFullYear()} Hikyaku · Open source, self-hostable, yours.`,
     },
     prism: {
       theme: prismThemes.github,

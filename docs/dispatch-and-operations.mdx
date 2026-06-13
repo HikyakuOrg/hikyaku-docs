@@ -51,7 +51,7 @@ This ensures that urgent deliveries are always assigned first.
 
 Route planning is powered by several advanced routing engines:
 
-- [OpenRouteService](https://openrouteservice.org/): Calculates the most efficient order of stops using real road networks.
+- [Valhalla](https://valhalla.github.io/valhalla/): Calculates travel times and distances using real road networks.
 - [VROOM](https://github.com/VROOM-Project/vroom): An open-source tool for vehicle routing and optimization.
 
 The system uses these services to group packages into the most efficient routes possible, taking into account each vehicle's capacity and the locations of all delivery stops. Each driver is assigned a route that starts and ends at the warehouse.
