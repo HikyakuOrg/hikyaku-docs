@@ -20,8 +20,6 @@ const sidebars: SidebarsConfig = {
       items: [
         'installation/supabase-setup',
         'installation/web-frontend',
-        'installation/scheduler',
-        'installation/mobile-application',
       ],
     },
     'security-and-access',
