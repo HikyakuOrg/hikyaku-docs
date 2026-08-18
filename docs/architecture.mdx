@@ -6,9 +6,11 @@ sidebar_position: 2
 
 # Architecture
 
-Hikyaku is not one application. It is a set of repositories that run on four different platforms, and most of the confusing parts of the codebase are consequences of that split. This page is the map: what runs where, how a request reaches the database, and why the less obvious pieces exist.
+Hikyaku is a set of repositories that run on four different platforms and most of the confusing parts of the codebase are consequences of that split. 
+This page maps what runs where and how each request is handled. Hosting your own instance is time consuming 
+and requires significant infrastructure management and resources.
 
-Read this before the installation guides. It will make the setup steps look deliberate instead of arbitrary.
+Read this before the installation guides and it will make the setup steps look deliberate instead of arbitrary.
 
 ## The shape
 
@@ -17,10 +19,10 @@ flowchart TB
   subgraph clients["Clients"]
     ops["Ops dashboard<br/>app.hikyaku.org"]
     book["Customer booking<br/>tenant subdomain"]
-    mob["Driver app<br/>Android · iOS · Desktop"]
+    mob["Driver app<br/>Android"]
   end
 
-  subgraph cf["Cloudflare — the zone"]
+  subgraph cf["Cloudflare"]
     dns["DNS + Universal SSL"]
     wrk["Worker: tenant-proxy"]
     tun["Tunnel: api host"]
@@ -32,11 +34,11 @@ flowchart TB
 
   subgraph supa["Supabase"]
     auth["Auth + OAuth Server"]
-    pg[("Postgres + RLS<br/>PostGIS")]
+    pg[("Postgres")]
     st["Storage"]
   end
 
-  subgraph self["Self-hosted Docker — one private network"]
+  subgraph self["Docker"]
     api["hikyaku-api<br/>NestJS"]
     val["Valhalla"]
     vr["VROOM"]
@@ -63,15 +65,9 @@ flowchart TB
 | Repository | Runs on | Owns |
 |---|---|---|
 | `hikyaku` | Vercel | The dashboard, the customer booking site, and all Supabase-backed reads and writes from the browser or server components |
-| `hikyaku-api` | Your own Docker host | Routing, optimisation, payments, card issuing, geocoding, invitations, mail, and scheduled jobs |
-| `hikyaku-workers/tenant-proxy` | Cloudflare | Terminating TLS for tenant vanity hosts and forwarding them to the app |
-| `hikyaku-landing` | Vercel | The marketing site and its Payload CMS |
-| `hikyaku-mobile` | Android, iOS, desktop | The driver app, sharing one Kotlin Multiplatform logic and UI layer |
-| `hikyaku-shopify` | Deployed alongside the API | Forwarding a merchant's paid orders into Hikyaku as delivery jobs |
-| `hikyaku-n8n` | The tenant's own n8n instance | Delivery-status triggers and package/customer lookups as n8n nodes |
-| `hikyaku-docs` | This site | Product and architecture documentation |
-
-Two of these are self-hosted on infrastructure you control: `hikyaku-api` and the spatial services it depends on. Everything else is managed.
+| `hikyaku-api` | Docker host | Routing, optimisation, payments, card issuing, geocoding, invitations, mail, and scheduled jobs |
+| `hikyaku-mobile` | Android | The driver app, sharing one Kotlin Multiplatform logic and UI layer |
+| `hikyaku-n8n` | n8n | Delivery-status triggers and package/customer lookups as n8n nodes |
 
 ## Multi-tenancy: two addressing modes
 
@@ -84,13 +80,9 @@ The booking site is the *only* thing served on a tenant subdomain. Any other pat
 
 When both are present, **the path wins over the host**. Middleware resolves the active slug and passes it downstream as an `x-org-slug` request header; everything below that point reads the header rather than re-parsing the URL.
 
-:::note
-Org-scoped filtering in the data layer is a known deferred follow-up. Do not assume the data layer scopes every query for you — check, and rely on row-level security as the real boundary. See [Access Control](./security-and-access.mdx).
-:::
+## Tenant Request
 
-## How a tenant request actually resolves
-
-This is the least obvious path in the system, and it involves a Cloudflare Worker that exists for a single specific reason.
+This is the least obvious path in the system and it involves a Cloudflare Worker that exists for a single specific reason.
 
 ```mermaid
 sequenceDiagram
@@ -99,9 +91,9 @@ sequenceDiagram
   participant V as Next.js app
   participant S as Supabase
 
-  B->>W: GET https://acme.example.org/booking
+  B->>W: GET https://team-hikyaku.hikyaku.org/booking
   Note over W: Universal SSL already covers the wildcard host
-  W->>V: GET https://origin.example.org/booking
+  W->>V: GET https://origin.hikyaku.org/booking
   Note over W,V: carries x-tenant-host plus a shared secret
   Note over V: middleware believes the forwarded host<br/>only when the secret matches
   V->>V: resolve slug, set x-org-slug
@@ -113,13 +105,14 @@ sequenceDiagram
 
 ### Why the Worker exists
 
-The hosting platform cannot issue a certificate for a wildcard tenant host, because that requires the platform to own the domain's nameservers via a DNS-01 challenge. The nameservers have to stay on Cloudflare so the API tunnel keeps working. Without the Worker, Cloudflare terminates the browser's TLS correctly and then fails the handshake to the origin — which users see as a Cloudflare **error 525**.
+The hosting platform cannot issue a certificate for a wildcard tenant host, because that requires the platform to own the domain's nameservers via a DNS-01 challenge. The nameservers have to stay on Cloudflare so the API tunnel keeps working. 
+Without the Worker, Cloudflare terminates the browser's TLS correctly and then fails the handshake to the origin and users will see as a Cloudflare **error 525**.
 
 The Worker resolves this by forwarding to an origin hostname the platform *does* hold a certificate for, carrying the real tenant hostname in a header instead of in `Host`.
 
 Two consequences worth internalising:
 
-1. **The shared secret is a security boundary, not a formality.** The origin host is publicly reachable. If the secret is missing or mismatched, any caller could set `x-tenant-host` themselves and read another organisation's booking data. The middleware ignores the forwarded host unless the secret matches.
+1. **The shared secret is a security boundary.** The origin host is publicly reachable. If the secret is missing or mismatched, any caller could set `x-tenant-host` themselves and read another organisation's booking data. The middleware ignores the forwarded host unless the secret matches.
 2. **Infrastructure hosts must be excluded from the Worker route.** The route pattern matches every subdomain, so the application and API hosts are excluded explicitly. Forgetting this puts a proxy hop in front of the API.
 
 Moving off the current host is a one-line change to the Worker's origin variable, because Cloudflare owns tenant DNS, TLS and routing regardless.
@@ -130,9 +123,9 @@ The operational database is a single Supabase project. Both the Next.js app and 
 
 | Caller | Path | Privilege |
 |---|---|---|
-| Browser and server components | Supabase client libraries | The signed-in user's token — row-level security applies |
-| `hikyaku-api` | Direct Postgres connection over TypeORM | Service role — full permissions, no RLS |
-| n8n nodes | PostgREST | The tenant user's own OAuth token — RLS applies |
+| Browser and server components | Supabase client libraries | Row-level security applies |
+| `hikyaku-api` | Direct Postgres connection over TypeORM | Service role, no Row-level security |
+| n8n nodes | PostgREST | Row-level security applies |
 
 The service-role key must never appear in the web application. It bypasses every access-control policy in the database.
 
@@ -141,10 +134,10 @@ The service-role key must never appear in the web application. It bypasses every
 Which Supabase services are in play:
 
 - **Auth** — email and password, Google sign-in via ID token, and WebAuthn MFA.
-- **Auth OAuth Server** — Hikyaku itself acts as an identity provider. This is what lets a tenant connect their Shopify store or n8n instance to their Hikyaku account without ever handing over a password. It is a Supabase beta feature.
-- **Postgres with PostGIS** — the operational tables, with row-level security enabled on every one.
+- **Auth OAuth Server** — Hikyaku itself acts as an identity provider. This is what lets a tenant connect their n8n instance to their Hikyaku account without ever handing over a password.
+- **Postgres** — the operational tables with row-level security enabled on every one.
 - **Storage** — proof of delivery, vehicle and maintenance photos, and app images. All buckets are private except avatars.
-- **Realtime** — package status changes, filtered server-side, which is what drives the n8n delivery-status trigger.
+- **Realtime** — package status changes and driver location updates.
 - **Vault** — encrypted storage for third-party connection tokens.
 
 Two things are deliberately *not* used: there are no Edge Functions, and scheduled work does not run in the database. Scheduling lives in the NestJS API instead. If you are looking for a cron job, look there.
@@ -156,32 +149,21 @@ Route planning and geocoding run as three containers on the same private Docker 
 | Service | Role |
 |---|---|
 | **Valhalla** | Routing, distance and time matrices, elevation, time zones |
-| **VROOM** | The vehicle-routing solver — it calls Valhalla as its router |
+| **VROOM** | The vehicle-routing solver. It calls Valhalla as its router |
 | **Photon** | Geocoding and address search |
 
 Two properties of this setup matter more than the services themselves:
 
 - **They publish no host ports.** They are reachable only by containers on the shared network, resolved by service name. They are not on localhost, the LAN, or the internet.
-- **They have no authentication whatsoever.** Anyone who can reach the port can use them. That is acceptable only because of the point above. If you ever publish a port, bind it to a specific interface — and note that Docker bypasses the host firewall, so the bind address is the control, not `ufw`.
+- **They have no authentication whatsoever.** Anyone who can reach the port can use them. That is acceptable only because of the point above. 
 
 The API and spatial stacks are separate Compose projects on purpose, so the API can be redeployed without rebuilding the slow spatial tiles. Expect the first Valhalla boot to take a long time: it downloads a regional extract and builds routing tiles before it answers anything, and VROOM and the API will error until it finishes.
 
 ## Integrations
 
-**Shopify.** The app makes no Admin API calls at all. Its one job is to forward every paid order to the API as a delivery job. Note that it runs *two* separate OAuth flows that are easy to confuse: Shopify's own flow for installing the app, and a separate PKCE flow against Hikyaku's OAuth server for linking the merchant's Hikyaku account. The webhook's HTTP status is a retry contract with Shopify — a 500 asks for a retry, a 200 does not.
-
 **n8n.** A community node package installed into the tenant's own n8n. The trigger holds a Realtime WebSocket per *activated workflow*, not per execution, which is the number that counts against connection limits. Lookups go through PostgREST with the user's own token, so row-level security is the access boundary.
 
 **Mobile.** The app is not compiled against a fixed backend. On first run it fetches its configuration from an environment endpoint on the web app, which returns the Supabase URL, the anonymous key, and the API base URL. This is what allows the app to point at a self-hosted Hikyaku instance instead of the default one.
-
-## Contracts you must not hand-write
-
-The API's OpenAPI specification is the source of truth for request and response shapes:
-
-- The web app generates its API types from the spec. The generated file is types-only and must never be edited by hand.
-- The mobile app generates its client from the same spec via a Gradle plugin.
-
-When you need a shape the spec describes, alias the generated type rather than redeclaring it. Redeclaring a DTO by hand means backend drift stops failing the build, which is the entire point of generating it.
 
 ## Where to start reading
 

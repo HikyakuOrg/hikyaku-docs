@@ -18,10 +18,10 @@ const sidebars: SidebarsConfig = {
     'architecture',
     {
       type: 'category',
-      label: 'Installation',
+      label: 'Self-Hosting',
       items: [
-        'installation/supabase-setup',
-        'installation/web-frontend',
+        'self-hosting/supabase-setup',
+        'self-hosting/web-frontend',
       ],
     },
     'security-and-access',
