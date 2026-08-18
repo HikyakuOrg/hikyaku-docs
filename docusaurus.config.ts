@@ -60,6 +60,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
+          routeBasePath: '/',
         },
         blog: {
           showReadingTime: true,
@@ -89,14 +90,9 @@ const config: Config = {
       logo: {
         alt: 'Hikyaku runner logo',
         src: 'img/hikyaku_icon.png',
+        href: '/',
       },
       items: [
-        {
-          type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
-          position: 'left',
-          label: 'Docs',
-        },
         {
           href: 'https://github.com/hikyakuorg',
           label: 'GitHub',
@@ -112,15 +108,15 @@ const config: Config = {
           items: [
             {
               label: 'Get started',
-              to: '/docs/intro',
+              to: '/',
             },
             {
               label: 'Installation',
-              to: '/docs/installation/supabase-setup',
+              to: '/installation/supabase-setup',
             },
             {
               label: 'Dispatch & operations',
-              to: '/docs/dispatch-and-operations',
+              to: '/dispatch-and-operations',
             },
           ],
         },
