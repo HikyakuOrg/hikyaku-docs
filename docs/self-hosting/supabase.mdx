@@ -20,22 +20,32 @@ Use this guide to bootstrap a fresh Supabase project for Hikyaku before starting
 1. Open the [Supabase dashboard](https://supabase.com/dashboard) and create a new project.
 2. Pick the organization, project name, region, and database password.
 3. Wait for the project to finish provisioning.
-4. From **Project Settings** copy and store these values:
+4. From **Project Overview** copy and store these values:
    - Project URL
-   - anon/public key
-   - service role key
-   - database connection string or database password
+   - Publishable key
+   - Database connection string
+
+![Supabase Dashboard](/img/supabase-dashboard.jpg)
+![Supabase Config](/img/supabase-dashboard-config.jpg)
+
+
+5. From **Project Settings** -> **API Keys** copy and store the **Secret key**.
+
+![Supabase Secret Key](/img/supabase-project-settings.jpg)
+
+
 
 Hikyaku services use the same Supabase project for auth, storage, and the Postgres database, so keep these values available before moving on.
 
 ## Configure Auth Providers
 
-Hikyaku already uses Supabase Auth for email/password sign-in and password recovery, and it includes an OTP confirmation route that also supports magic-link style flows.
+Hikyaku already uses Supabase Auth for email/password sign-in and password recovery and it includes an OTP confirmation route.
 
-In **Authentication -> Providers -> Email**:
+In **Authentication -> Sign In / Providers -> Email**:
 
 1. Enable the Email provider.
 2. Enable **Email + Password**.
+3. Disable **Allow annoymous sign-ins** 
 
 In **Authentication -> URL Configuration**:
 
@@ -47,21 +57,21 @@ In **Authentication -> URL Configuration**:
 
 The current frontend also sends sign-up email redirects using `window.location.origin`, so the active frontend origin must be present in your Supabase URL configuration.
 
-## Create the Required Storage Buckets
+## Enable the OAuth Server
 
-Create these buckets in **Storage**:
+Hikyaku itself acts as an OAuth identity provider so tenants can connect third-party integrations (for example, the Hikyaku n8n node) to their account without ever handing over a password.
 
-| Bucket | Access | Purpose |
-| --- | --- | --- |
-| `packages` | Private | Package upload images and related package assets |
-| `vehicles` | Public | Vehicle images shown directly in the dashboard |
-| `avatars` | Public | Driver and team profile images |
+In **Authentication -> OAuth Server**:
 
-Recommended bucket setup:
+1. Enable the OAuth 2.1 server.
+2. Set **Authorization Path** to `/oauth/consent` — this is the route the frontend already implements for the consent screen, and it combines with your Site URL to form the authorization endpoint.
 
-- allow image uploads for all three buckets
-- keep `packages` private because package files are read through signed URLs
-- keep `vehicles` and `avatars` public because the current UI reads them via public URLs
+In **Authentication -> OAuth Apps**:
+
+1. Click **Add a new client**.
+2. Set **Client type** to **Public** — the integrations connect via PKCE, no client secret is used.
+3. Add the **Redirect URI** for each integration you plan to support, for example your n8n instance's OAuth callback (`https://<your-n8n-domain>/rest/oauth2-credential/callback`).
+4. Click **Create** and copy the **Client ID** — integrations like the Hikyaku n8n node need it configured at deploy time.
 
 ## Post-Setup Checklist
 
@@ -69,6 +79,6 @@ After setup, confirm that:
 
 <InteractiveCheckbox label={<><code>app_permission</code>, <code>package_status</code>, and <code>vehicle_type</code> rows were seeded</>} />
 <InteractiveCheckbox label="Auth is enabled" />
-<InteractiveCheckbox label="The required storage buckets exist" />
+<InteractiveCheckbox label="The OAuth Server is enabled and an OAuth app is registered" />
 
 Once those are in place, you can move on to the web-frontend, server and spatial setup docs.
