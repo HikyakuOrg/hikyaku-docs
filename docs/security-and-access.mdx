@@ -4,80 +4,101 @@ sidebar_position: 4
 
 # Access Control
 
-Hikyaku uses a role-based access control (RBAC) model to determine **who** (a team member) can do **what** (a permission) on **which resource** (packages, drivers, vehicles, etc.).
+Access control decides what each person on your team can see and do. You set it per person, from **Fleet → Team members**.
 
-Access is enforced at two independent layers: the database rejects unauthorized reads and writes using row-level security policies, and the API rejects unauthorized requests using a permission guard before they reach the database. Both layers evaluate the same permission model.
+Everything is scoped to one organisation. If someone belongs to two organisations, their access in one says nothing about their access in the other.
 
-## Core Concepts
+:::warning[Choosing a role does not grant any access]
 
-| Concept | Description |
-|---|---|
-| **Permission** | A single capability expressed as `resource.action` — for example `packages.view` or `drivers.add`. |
-| **Role** | A named group of permissions assigned to a category of team member (e.g. Driver, Dispatcher). |
-| **Team Member** | A user account linked to a role. The team member inherits all permissions attached to that role. |
-| **Direct Grant** | An individual permission assigned directly to a team member, on top of their role. Use sparingly for exceptions. |
+A role is a label. On its own it gives a team member nothing — not even the ability to see a package.
 
-## System Roles
+Access comes from the **permission checkboxes** you tick when adding or inviting someone. If you set a role and skip the checkboxes, that person signs in to an empty dashboard.
 
-The following roles are system-managed. Default permission sets are listed below. Administrators can grant additional permissions to any role at any time.
+Changing someone's role later does not change their permissions either. You have to update those separately.
 
-| Role | Default Permissions |
-|---|---|
-| **Admin** | TBD |
-| **Manager** | TBD |
-| **Dispatcher** | TBD |
-| **Picker** | TBD |
-| **Technician** | TBD |
-| **Driver** | TBD |
-
-:::note
-The first user created in a fresh deployment is automatically granted all permissions, regardless of role, to allow initial setup.
 :::
 
-## Permission Reference
+## Roles
 
-Permissions are grouped by resource. Each resource supports a subset of the standard actions: **view**, **add**, **update**, and **delete**.
+| Role | What it does |
+|---|---|
+| **Driver** | The only role with built-in behaviour. Creates a driver profile — licence number, expiry, country of issue, probation status, licence type — and makes the person available for assignment and the mobile app. |
+| **Manager**, **Dispatcher**, **Picker**, **Technician** | Labels for organising your team list. They do not affect access. |
+| **Admin** | Not something you assign. Anyone holding every permission is shown as an admin automatically. |
 
-| Resource | Available Actions | Description |
+## Permissions
+
+Permissions are named `resource.action` and grouped by resource in the picker, with a select-all toggle for each group.
+
+| Group | Permissions | What it covers |
 |---|---|---|
-| **Drivers** | view, add, update, delete | Access and manage driver profiles |
-| **Vehicles** | view, add, update, delete | Access and manage fleet vehicles |
-| **Customers** | view, add, update, delete | Access and manage customer records |
-| **Packages** | view, add, update, delete | Access and manage package intake and tracking |
-| **Warehouse** | view, add | Access and log warehouse service entries |
+| **packages** | `view` `add` `update` `delete` | Packages, dimensions, delivery windows, tracking history, proof of delivery, and failure records |
+| **shifts** | `view` `assign` | Assigning packages to drivers, and running and viewing route optimisation |
+| **drivers** | `view` `add` `update` `delete` | Driver profiles and licence details |
+| **vehicles** | `view` `add` `update` `delete` | Vehicles, plus fuel cards, card transactions, payout setup, and service rates |
+| **customers** | `view` `add` `update` `delete` | Customer records |
+| **warehouse** | `view` `add` `update` `delete` | Warehouse service entries |
+| **locations** | `view` | Live driver locations and location history |
+| **team_members** | `view` `add` `edit` `delete` | Adding, editing, deactivating, and reactivating team members and invitations |
+| **service_areas** | `edit` | Creating and editing service areas. Every member can already view them |
+| **organisation** | `edit` | Organisation settings |
 
-## Team Member Management
+:::note[Permissions that do not do anything yet]
 
-Team members are managed from **Fleet → Team members** in the dashboard.
+`service_rates.*`, `fuel_cards.*`, and `transactions.view` appear in the picker but are not active. Fuel cards, transactions, and service rates are currently controlled by the **vehicles** permissions instead. Ticking these has no effect.
 
-**Adding a team member**
+:::
 
-1. Open Fleet → Team members and select **Add Team Member**.
-2. Enter the user's details and select their **Role**.
-3. Optionally grant additional individual permissions on top of the role.
-4. Submit — the user receives credentials and is immediately bound by the assigned permissions.
+## Adding a team member
 
-**Changing a role**
+1. Go to **Fleet → Team members** and choose **Add Team Member**.
+2. Enter their details and pick a **Role**. Choosing Driver adds the licence fields.
+3. Tick the permissions they need. **Do not skip this step** — see the warning above.
+4. Submit. They get an email invitation, and their access applies from their first sign-in.
 
-A team member's role can be updated from the team member list. The change takes effect immediately; the member's permissions update to reflect the new role on their next request.
+The person who created the organisation holds every permission. That is the account to keep safe.
 
-**Granting extra permissions**
+## Starting points
 
-If a team member needs a capability outside their role, individual permissions can be granted directly. These are additive — they extend the role's permission set rather than replacing it.
+Sensible sets to adjust rather than copy blindly.
 
-## How Access Is Enforced
+| Job | Permissions |
+|---|---|
+| **Driver** | None. See below. |
+| **Dispatcher** | `packages.view` `packages.add` `packages.update` · `shifts.view` `shifts.assign` · `drivers.view` · `vehicles.view` · `locations.view` · `customers.view` |
+| **Warehouse / picker** | `packages.view` `packages.update` · `warehouse.view` `warehouse.add` `warehouse.update` · `customers.view` |
+| **Fleet technician** | `vehicles.view` `vehicles.update` · `drivers.view` |
+| **Operations manager** | The dispatcher set, plus `team_members.*`, `service_areas.edit`, and `organisation.edit` |
 
-Access is checked at two independent layers:
+**Managing drivers without full team access.** Give a dispatcher `drivers.add`, `drivers.update`, or `drivers.delete` and they can add, edit, and remove team members — but only people whose role is Driver. They gain no authority over managers or other dispatchers. Prefer this over `team_members.*` for anyone who only runs the driver roster.
 
-1. **API layer** — every incoming request is validated by a permission guard that checks whether the authenticated user holds the required permission. Unauthorized requests are rejected before reaching any business logic.
+## What drivers get automatically
 
-2. **Database layer** — Supabase row-level security (RLS) policies call a `has_permission()` function on every table operation. This means even direct database queries or service keys with reduced scope cannot bypass the permission model.
+A driver needs no permissions at all. Once a package is assigned to them, they can:
 
-A user is considered to hold a permission if it is attached to their role **or** granted to them directly.
+- See that package, its customer, and the vehicle they are using
+- Record proof of delivery, delivery failures, and tracking updates on it
+- Share their own location while working
+- View their own profile and location history
 
-## Best Practices
+They see nothing else — no other driver's work, and no package that is not theirs. Grant permissions to a driver only if you want them to see beyond their own assignments.
 
-- **Apply least privilege.** Assign the role that most closely matches the team member's responsibilities. Avoid granting all permissions to operational accounts.
-- **Prefer role grants over direct grants.** Attaching permissions to a role keeps access consistent and easier to audit. Use direct grants only for temporary or one-off exceptions.
-- **Review team access periodically.** When a team member changes responsibilities, update their role rather than accumulating direct grants over time.
-- **Protect the first-user account.** The bootstrap account created during initial setup holds all permissions. Treat it as an administrative account and restrict who can access it.
+## Changing and removing access
+
+**Adjusting permissions** — update them from the team member's record. Changes apply on their next action.
+
+**Deactivating someone** blocks sign-in and ends their active sessions. Nothing is deleted: their delivery history and records stay intact, and reactivating restores access.
+
+Two deactivations are refused:
+
+- Your own account.
+- An account holding every permission. This is what stops the last administrator being locked out. Remove a permission from that account first if you genuinely need to deactivate it.
+
+Deactivating several people at once processes each one separately, so some can succeed while others fail. Check the result rather than assuming all of them worked.
+
+## Tips
+
+- **Grant the narrowest useful action.** Someone who needs to see packages rarely needs to delete them.
+- **Keep two accounts with full permissions.** Full-permission accounts cannot be deactivated, but they can still be lost — a second one is your way back in.
+- **Treat `team_members.add` as your most sensitive permission.** Anyone holding it can create an account with more access than they have themselves.
+- **Revisit access when someone changes job.** Changing their role does nothing on its own.
