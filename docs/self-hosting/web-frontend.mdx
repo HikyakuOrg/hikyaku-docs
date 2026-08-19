@@ -4,13 +4,13 @@ title: Web Frontend
 sidebar_position: 1
 ---
 
-# Web Frontend
+# Web Setup
 
 ## Prerequisites
 
 - Node.js 20+
 - pnpm
-- A provisioned Supabase project — follow the [Supabase Setup](./supabase) guide first if you have not done this yet.
+- A provisioned Supabase project. Follow the [Supabase Setup](./supabase) guide first if you have not done this yet.
 
 ## Environment Variables
 
@@ -26,9 +26,8 @@ The base URL of your Supabase project. Every API call the frontend makes is rout
 
 **How to find it:**
 
-1. Open the [Supabase Dashboard](https://supabase.com/dashboard) and select your project.
-2. Go to **Project Settings → API**.
-3. Copy the value shown under **Project URL** (e.g. `https://abcdefghijklmnop.supabase.co`).
+1. On the **Project Overview** page, click on the dropdown menu.
+2. Copy the value shown under **Project URL** (e.g. `https://abcdefghijklmnop.supabase.co`).
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://abcdefghijklmnop.supabase.co
@@ -38,15 +37,19 @@ NEXT_PUBLIC_SUPABASE_URL=https://abcdefghijklmnop.supabase.co
 
 ### `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY`
 
-The anon/public JWT that the browser uses to authenticate requests to Supabase. Row-level security policies limit what this key can access, so it is safe to expose in client-side code.
+The publishable key that the browser uses to authenticate requests to Supabase. Row-level security policies limit what this key can access, so it is safe to expose in client-side code.
 
 **How to find it:**
 
-1. In the same **Project Settings → API** page, scroll to **Project API keys**.
-2. Copy the **anon / public** key (not the service role key).
+1. On the **Project Overview** page, click on the dropdown menu.
+2. Copy the value shown under **Publishable key**.
+
+![Supabase Dashboard](/img/supabase-dashboard.jpg)
+![Supabase Config](/img/supabase-dashboard-config.jpg)
+
 
 ```
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=sb_publishable_xxx.
 ```
 
 :::caution
@@ -71,17 +74,76 @@ NEXT_PUBLIC_OSM_TILE_URL=
 
 ---
 
-### `NEXT_PUBLIC_ORS_SERVER`
+### `NEXT_PUBLIC_HIKYAKU_API_URL`
 
-The base URL of the [OpenRouteService](https://openrouteservice.org/) instance used for routing, directions, and the snap-to-roads feature. The scheduler also uses this server independently.
-
-**For local development** the default points to the ORS container started by the scheduler's `docker-compose.yml`:
+The base URL of `hikyaku-api`, the NestJS backend. See the [NestJS API](./nestjs-api) guide for standing this up.
 
 ```
-NEXT_PUBLIC_ORS_SERVER=http://localhost:8082/ors
+NEXT_PUBLIC_HIKYAKU_API_URL=http://localhost:3002
 ```
 
-For production, point this at your deployed ORS instance or the public ORS API endpoint.
+---
+
+### `NEXT_PUBLIC_ROOT_DOMAIN`
+
+The root domain tenants are reached at, as `<slug>.<root>`. Set this to the domain you control if you want subdomain-based customer booking sites — see [Before You Go to Production](./overview#before-you-go-to-production) for the wildcard TLS prerequisites.
+
+```
+# prod
+NEXT_PUBLIC_ROOT_DOMAIN=hikyaku.org
+
+# local
+NEXT_PUBLIC_ROOT_DOMAIN=localhost:3000
+```
+
+---
+
+### `TENANT_PROXY_SECRET`
+
+A shared secret with the Cloudflare Worker in `workers/tenant-proxy`, which serves the `<slug>.hikyaku.org` vanity hosts. The middleware only trusts the tenant host the Worker forwards when this value matches, so it must be identical in both places. See [Architecture → Why the Worker exists](../architecture#why-the-worker-exists) for the full reasoning.
+
+```
+TENANT_PROXY_SECRET=$(openssl rand -hex 32)
+```
+
+:::note
+Leave this unset for local development. Subdomains resolve straight to the dev server, so the `Host` header is already correct and no proxy is involved.
+:::
+
+---
+
+### `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+
+The Google OAuth web client ID, from the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) under **Credentials**. Drives the "Sign in with Google" button and One Tap on the auth pages — the buttons render only once this is set.
+
+```
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
+```
+
+:::caution
+The matching client **secret** is not used by this app. Paste it into the Supabase dashboard instead, under **Authentication → Providers → Google**, and add this same client ID to that provider's **Authorized Client IDs** field — otherwise `signInWithIdToken` will reject the token.
+:::
+
+---
+
+### `NEXT_PUBLIC_WEBAUTHN_MFA_ENABLED`
+
+Shows the "Add security key" control in account settings.
+
+```
+NEXT_PUBLIC_WEBAUTHN_MFA_ENABLED=true
+```
+
+:::caution
+WebAuthn MFA enrollment is disabled by default on Supabase projects, and there is no Dashboard toggle for it yet. This variable must line up with a manual Management API call:
+
+```
+PATCH /v1/projects/<ref>/config/auth
+{"mfa_web_authn_enroll_enabled": true, "mfa_web_authn_verify_enabled": true}
+```
+
+Leave this unset (or `false`) until that's confirmed enabled server-side, or the button will fail with "MFA enroll is disabled for WebAuthn".
+:::
 
 ---
 

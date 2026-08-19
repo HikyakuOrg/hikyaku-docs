@@ -33,7 +33,7 @@ Choose self-hosting when you need control over where data lives, want to customi
 | Database, Auth, Storage | Supabase | Supabase Cloud or a self-hosted Supabase project | [Supabase Setup](./supabase) |
 | Routing, optimisation, payments, scheduling | [`hikyaku-api`](https://github.com/hikyakuorg/hikyaku-api) | Docker host | [NestJS API](./nestjs-api) |
 | Spatial stack(Valhalla, VROOM, Photon) | bundled with `hikyaku-api` | Docker, private network shared with the API | [NestJS API](./nestjs-api) |
-| Driver app | [`hikyaku-mobile`](https://github.com/hikyakuorg/hikyaku-mobile) | Android | Not yet published |
+| Driver app | [`hikyaku-mobile`](https://github.com/hikyakuorg/hikyaku-mobile) | Android | [Mobile Setup](./mobile) |
 | n8n integration | [`hikyaku-n8n`](https://github.com/hikyakuorg/hikyaku-n8n) | Your n8n instance | Not yet published |
 
 For guides marked "not yet published," the [Architecture](../architecture) page documents what the component does and how it's networked, and the repository's own README covers its local run steps in the meantime.
@@ -52,8 +52,9 @@ For guides marked "not yet published," the [Architecture](../architecture) page 
 1. **[Set up Supabase](./supabase)** — creates the database, auth configuration, and storage buckets everything else depends on.
 2. **[Deploy the web frontend](./web-frontend)** — the dashboard and customer booking site.
 3. **[Deploy the NestJS API](./nestjs-api)** — routing, optimisation, payments, scheduling, and the spatial stack (Valhalla, VROOM, Photon).
+4. **[Set up the mobile app](./mobile)** — only needed if you have drivers signing in from the field; Android only for now.
 
-From there, use the [Architecture](../architecture) page as your map for the driver app and n8n integration until dedicated guides are published.
+From there, use the [Architecture](../architecture) page as your map for the n8n integration until a dedicated guide is published.
 
 ## Before You Go to Production
 

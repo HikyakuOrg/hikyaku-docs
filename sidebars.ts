@@ -27,6 +27,7 @@ const sidebars: SidebarsConfig = {
         'self-hosting/supabase',
         'self-hosting/web-frontend',
         'self-hosting/nestjs-api',
+        'self-hosting/mobile',
       ],
     },
     'security-and-access',

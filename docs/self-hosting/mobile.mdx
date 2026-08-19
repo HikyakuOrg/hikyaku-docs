@@ -1,0 +1,35 @@
+---
+id: mobile
+title: Mobile Setup
+sidebar_position: 4
+---
+
+# Mobile Setup
+
+`hikyaku-mobile` is the driver app. See [Architecture → Where the code runs](../architecture#where-the-code-runs) for how it fits into the rest of the system.
+
+:::note
+This page only applies if you're self-hosting. Drivers on the hosted instance at `app.hikyaku.org` don't need to configure anything.
+:::
+
+**Only Android is supported for now.**
+
+## Why self-hosted instances need manual configuration
+
+The app is not compiled against a fixed backend. As described in [Architecture → Integrations](../architecture#integrations), on first run it normally fetches its configuration from an environment endpoint on the web app.
+
+That auto-discovery is wired to the hosted instance. Self-hosted instances don't have a way for the app to guess where to look, so drivers signing in against a self-hosted deployment must enter this by hand on the sign-in screen: **the URL of your web frontend deployment** (your Next.js app's own URL), not the Supabase URL or the API base URL directly. The app hits that URL's environment endpoint itself to fetch the Supabase URL, anonymous key, and API base URL.
+
+:::caution
+**HTTPS is compulsory.** The frontend URL entered on the sign-in screen must be `https://`. Android blocks cleartext (`http://`) traffic by default, so an `http://` URL will not work. See Android's [Security with HTTPS and SSL](https://developer.android.com/privacy-and-security/security-ssl) guide for why. Make sure TLS is terminated in front of your web frontend deployment before asking drivers to sign in.
+:::
+
+Have your [web frontend](./web-frontend) and [NestJS API](./nestjs-api) deployed and reachable before asking drivers to sign in.
+
+<video controls width="100%">
+  <source src="/video/mobile-self-hosted-login-flow.mp4" type="video/mp4" />
+</video>
+
+## Getting Help
+
+- **Issues and source** — [github.com/hikyakuorg/hikyaku-mobile](https://github.com/hikyakuorg/hikyaku-mobile)
