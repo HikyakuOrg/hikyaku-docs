@@ -18,10 +18,15 @@ const sidebars: SidebarsConfig = {
     'architecture',
     {
       type: 'category',
-      label: 'Self-Hosting',
+      label: 'Self-Hosting Hikyaku',
+      link: {
+        type: 'doc',
+        id: 'self-hosting/overview',
+      },
       items: [
         'self-hosting/supabase',
         'self-hosting/web-frontend',
+        'self-hosting/nestjs-api',
       ],
     },
     'security-and-access',

@@ -1,0 +1,240 @@
+---
+id: nestjs-api
+title: NestJS API
+sidebar_position: 3
+---
+
+import InteractiveCheckbox from '@site/src/components/checkbox';
+
+# NestJS API
+
+`hikyaku-api` is the NestJS service behind routing, optimisation, payments, card issuing, geocoding, invitations, mail, and scheduled jobs. See [Architecture](../architecture.mdx) for how it fits into the rest of the system. This guide covers standing up the API itself, its database, and its spatial stack (Valhalla, VROOM, Photon).
+
+## Prerequisites
+
+- Node.js 20+
+- pnpm
+- Docker and Docker Compose
+- A provisioned Supabase project — follow the [Supabase Setup](./supabase.mdx) guide first if you have not done this yet
+- A Stripe account — billing and card issuing both go through Stripe; test-mode keys are fine for local development
+- SMTP credentials — for invitation, password reset, and other transactional email
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local` and fill in each variable as described below.
+
+```bash
+cp .env.example .env.local
+```
+
+### `DB_URL`
+
+The Postgres connection string the running app uses for normal queries.
+
+```
+DB_URL=postgresql://<user>:<password>@<host>:5432/postgres
+```
+
+---
+
+### `DB_MIGRATION_URL`
+
+The connection string used by the TypeORM migration CLI. Migrations run as an explicit deploy step — automatically as part of `pnpm start:prod`, or manually with `pnpm migration:run` during development — never silently when the app boots.
+
+:::caution
+Use Supabase's **Direct connection** (port `5432`), not the `6543` transaction pooler. DDL and advisory locks are unreliable under transaction pooling. If unset, this falls back to `DB_URL`.
+:::
+
+```
+DB_MIGRATION_URL=postgresql://<user>:<password>@<host>:5432/postgres
+```
+
+---
+
+### `VALHALLA_URL`, `VROOM_URL`, `PHOTON_URL`
+
+The base URLs of the three spatial services. See [Start the Spatial Stack](#start-the-spatial-stack) below for how to run them.
+
+- Running the API directly on the host (`pnpm start:dev`) and the spatial services in Docker with their ports published to `localhost`:
+
+  ```
+  VALHALLA_URL=http://localhost:8002
+  VROOM_URL=http://localhost:3000
+  PHOTON_URL=http://localhost:2322
+  ```
+
+- Running the API itself inside Docker, on the same `hikyaku-net` network as the spatial services, with no published ports:
+
+  ```
+  VALHALLA_URL=http://valhalla:8002
+  VROOM_URL=http://vroom:3000
+  PHOTON_URL=http://photon:2322
+  ```
+
+---
+
+### `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+
+The same Supabase project used by the web frontend, but accessed with the **service role** key instead of the anon key.
+
+**How to find it:**
+
+1. In **Project Settings → API**, copy the **Project URL**.
+2. In the same page, under **Project API keys**, copy the **service role** key (not anon/public).
+
+```
+SUPABASE_URL=https://abcdefghijklmnop.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_xxxxxxxxxxxx
+```
+
+:::caution
+The service role key bypasses row-level security. It must only ever live in this server-side environment, never in the web application.
+:::
+
+---
+
+### `CORS_DOMAIN`
+
+A comma-separated list of origins allowed to call this API — normally your frontend's origin(s).
+
+```
+CORS_DOMAIN=http://localhost:3000,https://hikyaku.org
+```
+
+---
+
+### `STRIPE_API_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_ISSUING_WEBHOOK_SECRET`
+
+Stripe powers both billing and card issuing.
+
+**How to find them:**
+
+1. In the [Stripe Dashboard](https://dashboard.stripe.com/), copy the secret and publishable keys for the mode you're using (test or live).
+2. For `STRIPE_ISSUING_WEBHOOK_SECRET`, either run `stripe listen` locally and use the signing secret it prints, or create a webhook endpoint subscribed to `issuing.*` events and copy its signing secret from the Dashboard.
+
+```
+STRIPE_API_KEY=sk_test_xxxxxxxx
+STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxx
+STRIPE_ISSUING_WEBHOOK_SECRET=whsec_xxxxxx
+```
+
+---
+
+### `MAILER_SENDER_EMAIL`, `MAILER_HOST`, `MAILER_USER`, `MAILER_PASSWORD`
+
+SMTP credentials used to send invitations, password resets, and other transactional email.
+
+```
+MAILER_SENDER_EMAIL=auth@hikyaku.org
+MAILER_HOST=smtp.your-provider.com
+MAILER_USER=xxxx
+MAILER_PASSWORD=xxxxxx
+```
+
+---
+
+### `APP_URL`
+
+The frontend origin, used to build links inside outgoing emails.
+
+```
+APP_URL=http://localhost:3000
+```
+
+---
+
+### `SENTRY_DSN`
+
+Optional. Error tracking (Sentry) is only enabled when this is set — leave it blank to disable it.
+
+---
+
+### `PORT`
+
+Optional, not present in `.env.example`. The API listens on `3002` by default; set `PORT` to override it.
+
+## Bootstrap the Database
+
+**Option A — Docker Compose job:**
+
+```bash
+cd infra/db
+docker compose up
+```
+
+This runs `setup_db.sh` followed by `refresh_timezones.sh` inside a throwaway container. Edit the `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` environment values in `infra/db/docker-compose.yml` first — use Supabase's **Direct connection** host, not the pooler, since the roles and schema scripts run DDL.
+
+**Option B — run the scripts directly:**
+
+```bash
+cd infra/db
+./setup_db.sh          # prompts for DB_HOST/PORT/NAME/USER/PASSWORD if unset
+./refresh_timezones.sh # populates the timezone table
+```
+
+`refresh_timezones` may need re-running later if geopolitical timezone changes occur.
+
+Once this baseline is in place, ongoing schema changes are handled by TypeORM migrations under `src/database/migrations` — applied automatically as part of `pnpm start:prod`, or manually with `pnpm migration:run` in development.
+
+## Start the Spatial Stack
+
+Valhalla, VROOM, and Photon run as a separate Compose project so the API can be redeployed without rebuilding the slow spatial tiles. They publish no ports by default — reachable only by other containers on a shared Docker network, never the internet.
+
+For anything not covered here, refer to each project's own docs:
+
+- [Valhalla Docker guide](https://github.com/valhalla/valhalla/blob/master/docker/README.md)
+- [VROOM](https://github.com/vroom-project/vroom)
+- [Photon](https://github.com/komoot/photon)
+
+1. Create the shared network (once):
+
+   ```bash
+   docker network create hikyaku-net
+   ```
+
+2. Provide the files the compose stack expects, under `infra/`:
+   - `vroom-conf/config.yml` — point `routingServers.valhalla` at `http://valhalla:8002`
+   - `photon/photon-1.1.0.jar` and `photon/photon_data/` — the Photon jar and a prebuilt geocoding index
+   - `valhalla_tiles/` — created automatically on first boot
+
+3. Start it:
+
+   ```bash
+   docker compose -f infra/spatial-docker-compose.yml up -d
+   ```
+
+:::caution
+First boot is slow. Valhalla downloads a regional OSM extract and builds routing tiles before it answers anything. Watch progress with `docker compose -f infra/spatial-docker-compose.yml logs -f valhalla`.
+:::
+
+If you're running the API directly on the host instead of in Docker, bind the spatial ports to `localhost` so the API can reach them — add a `ports` entry per service (e.g. `"127.0.0.1:8002:8002"`) rather than publishing to all interfaces. See `infra/README.md` for the full exposure table (localhost, LAN, tailnet, or public).
+
+## Run the API
+
+**Development**, once the database is bootstrapped and the spatial stack is reachable:
+
+```bash
+pnpm install
+pnpm start:dev
+```
+
+The API listens on http://localhost:3002 by default, with interactive Swagger docs at http://localhost:3002/api-docs.
+
+**Self-hosted with Docker**, using the prebuilt image:
+
+1. Create `.env.prod` next to `infra/docker-compose.yml` with the same variables described above.
+2. Start it:
+
+   ```bash
+   cd infra
+   docker compose up -d
+   ```
+
+This runs migrations and then starts the server. For production exposure, the compose file has a commented-out Cloudflare Tunnel service — see [Architecture](../architecture.mdx#the-shape) for why the tunnel is the intended path to the internet rather than published ports.
+
+## Post-Setup Checklist
+
+<InteractiveCheckbox label="Supabase project is bootstrapped with roles, schema, and seed data" />
+<InteractiveCheckbox label="Spatial stack (Valhalla, VROOM, Photon) is running and reachable from the API" />
+<InteractiveCheckbox label="API responds at /api-docs" />
+<InteractiveCheckbox label="Stripe and mailer credentials are set" />

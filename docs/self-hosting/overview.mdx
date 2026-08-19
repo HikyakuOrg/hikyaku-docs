@@ -1,0 +1,81 @@
+---
+id: overview
+title: Self-Hosting Hikyaku
+---
+
+import InteractiveCheckbox from '@site/src/components/checkbox';
+
+# Self-Hosting Hikyaku
+
+Hikyaku is open source and built to run outside of the hosted instance at `app.hikyaku.org`. This page is the starting point for standing up your own deployment.
+
+Read [Architecture](../architecture) first if you haven't already. It explains how the pieces below fit together, and a couple of setup steps only make sense once you know why they exist.
+
+## Self-Hosted vs. Hosted
+
+Hikyaku runs the same code in both places — self-hosting doesn't unlock a different feature set, it changes who operates the infrastructure.
+
+| | Hosted (`app.hikyaku.org`) | Self-hosted |
+|---|---|---|
+| Setup | None — sign up and go | You provision every component below |
+| Updates | Applied for you | You track releases and upgrade each repo yourself |
+| Data | Lives in Hikyaku's Supabase project | Lives in infrastructure you control |
+| Customization | Standard configuration | Full access to modify and redeploy any service |
+| Cost | Subscription | Your own infrastructure spend (Supabase, compute, domains) |
+
+Choose self-hosting when you need control over where data lives, want to customize the platform, or are integrating it into infrastructure you already operate.
+
+## What You'll Be Running
+
+| Component | Repository | Runs on | Setup guide |
+|---|---|---|---|
+| Dashboard & customer booking site | [`hikyaku`](https://github.com/hikyakuorg/hikyaku) | Vercel, or any Next.js host | [Web Frontend](./web-frontend) |
+| Database, Auth, Storage | Supabase | Supabase Cloud or a self-hosted Supabase project | [Supabase Setup](./supabase) |
+| Routing, optimisation, payments, scheduling | [`hikyaku-api`](https://github.com/hikyakuorg/hikyaku-api) | Docker host | [NestJS API](./nestjs-api) |
+| Spatial stack(Valhalla, VROOM, Photon) | bundled with `hikyaku-api` | Docker, private network shared with the API | [NestJS API](./nestjs-api) |
+| Driver app | [`hikyaku-mobile`](https://github.com/hikyakuorg/hikyaku-mobile) | Android | Not yet published |
+| n8n integration | [`hikyaku-n8n`](https://github.com/hikyakuorg/hikyaku-n8n) | Your n8n instance | Not yet published |
+
+For guides marked "not yet published," the [Architecture](../architecture) page documents what the component does and how it's networked, and the repository's own README covers its local run steps in the meantime.
+
+## Prerequisites
+
+- **Node.js 20+** and **pnpm** — for building and running the dashboard
+- **Docker** — for the API and spatial stack
+- **A Supabase project** — either [supabase.com](https://supabase.com) or a self-hosted Supabase instance
+- **A domain you control** — required only if you want subdomain-based customer booking sites (`<tenant>.yourdomain.com`); see the TLS note below
+- Access to whichever repositories you plan to deploy, under the [hikyaku](https://github.com/hikyakuorg) GitHub org
+
+## Getting Started
+
+
+1. **[Set up Supabase](./supabase)** — creates the database, auth configuration, and storage buckets everything else depends on.
+2. **[Deploy the web frontend](./web-frontend)** — the dashboard and customer booking site.
+3. **[Deploy the NestJS API](./nestjs-api)** — routing, optimisation, payments, scheduling, and the spatial stack (Valhalla, VROOM, Photon).
+
+From there, use the [Architecture](../architecture) page as your map for the driver app and n8n integration until dedicated guides are published.
+
+## Before You Go to Production
+
+A few things that are easy to miss if you're used to the hosted instance:
+
+:::caution
+The spatial stack (Valhalla, VROOM, Photon) has **no authentication**. This is safe only because those containers publish no host ports and are reachable exclusively over the private Docker network shared with the API. Never expose them on the LAN or the public internet.
+:::
+
+- **Wildcard TLS for tenant subdomains.** Skip this if you're only using the path-based dashboard. If you want subdomain-based booking sites, your hosting platform needs to issue a wildcard certificate for your domain — most platforms can't do this without owning your nameservers. Hikyaku's own hosted instance solves this with a Cloudflare Worker; see [Architecture → Why the Worker exists](../architecture#why-the-worker-exists) for the full reasoning.
+- **The first Valhalla boot is slow.** It downloads a regional map extract and builds routing tiles before it answers anything. VROOM and the API will error until that finishes — this is expected, not a crash.
+- **Keep the Supabase service-role key server-side only.** It bypasses every row-level security policy in the database. It belongs in `hikyaku-api`, never in the web app's client bundle.
+
+## Checklist
+
+<InteractiveCheckbox label="Architecture reviewed" />
+<InteractiveCheckbox label="Supabase project provisioned" />
+<InteractiveCheckbox label="Web frontend deployed and reachable" />
+<InteractiveCheckbox label="NestJS API and spatial stack deployed and reachable" />
+<InteractiveCheckbox label="Wildcard TLS configured (if using subdomain booking sites)" />
+
+## Getting Help
+
+- **Issues and source** — each component lives in its own repo under [github.com/hikyakuorg](https://github.com/hikyakuorg)
+- **Email** — [hello@hikyaku.org](mailto:hello@hikyaku.org)
