@@ -26,7 +26,7 @@ All three are also marked `usableAsTool`, so you can hand them to an **AI Agent*
 
 - **Node.js 22 or newer** on the n8n host. The trigger node uses the `WebSocket` client built into Node (stable from v22.5) to hold its Realtime connection open. On an older Node version it fails activation with a clear error rather than crashing.
 - **Community node installation enabled** on your n8n instance, and an **Owner or Admin** role to install one.
-- **A Hikyaku account.**
+- **A Hikyaku organisation account.**
 
 :::caution[Self-hosted Hikyaku]
 The published `n8n-nodes-hikyaku` package is pre-configured to connect to the **hosted** Hikyaku instance (`app.hikyaku.org`) — the Supabase project URL and OAuth client ID are baked into the build. If you're self-hosting Hikyaku, installing the npm package as-is will connect your n8n workflows to the hosted instance's data, not yours.
@@ -60,6 +60,15 @@ Community nodes are unverified third-party code by n8n's own definition, and GUI
 n8n stores the resulting token and refreshes it automatically. The token is a normal Supabase session scoped to your organisation, so every lookup these nodes make is subject to the same row-level security as the dashboard.
 
 ![Hikyaku OAuth connected](/img/n8n/n8n-credential-connected.png)
+
+## Revoke Access
+
+If you no longer want n8n (or any other integration) reading your Hikyaku data, you can revoke its access at any time without changing your password.
+
+1. In Hikyaku, go to **Settings → Connected Apps**.
+2. Find the app in the list (e.g. **n8n**) and click **Revoke**.
+
+Revoking breaks any Hikyaku nodes still using that connection — the trigger stops firing and lookups start failing. To restore the integration, delete the old **Hikyaku OAuth2 API** credential in n8n and create a new one following [Connect Your Account](#connect-your-account) above.
 
 ## Node References
 
