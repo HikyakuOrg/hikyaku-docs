@@ -1,0 +1,157 @@
+---
+id: n8n
+title: n8n Integration
+sidebar_position: 1
+---
+
+# n8n Integration
+
+[`hikyaku-n8n`](https://github.com/hikyakuorg/hikyaku-n8n) (published to npm as [`n8n-nodes-hikyaku`](https://www.npmjs.com/package/n8n-nodes-hikyaku)) is a community node package that brings Hikyaku into your n8n workflows: react to delivery status changes as they happen, and enrich any workflow with customer and package data.
+
+See [Architecture → Where the code runs](../architecture#where-the-code-runs) and [Architecture → Integrations](../architecture#integrations) for how this plugs into the rest of the system — this page is the setup and usage guide.
+
+## What You Get
+
+The package ships three nodes and one credential type:
+
+| Node | Type | What it does |
+|---|---|---|
+| **Hikyaku Delivery Status Trigger** | Trigger | Starts the workflow the moment a package's delivery status changes. Optionally filter to specific statuses. |
+| **Hikyaku Get Customer** | Action | Looks up a customer by ID and adds their name, phone, and email to the item. |
+| **Hikyaku Get Package** | Action | Looks up a package by ID and adds its dimensions, tracking number, and current status to the item. |
+
+All three are also marked `usableAsTool`, so you can hand them to an **AI Agent** node instead of wiring them into a fixed sequence. See [Example: an AI agent that answers tracking questions](#example-an-ai-agent-that-answers-tracking-questions) below.
+
+## Prerequisites
+
+- **Node.js 22 or newer** on the n8n host. The trigger node uses the `WebSocket` client built into Node (stable from v22.5) to hold its Realtime connection open. On an older Node version it fails activation with a clear error rather than crashing.
+- **Community node installation enabled** on your n8n instance, and an **Owner or Admin** role to install one.
+- **A Hikyaku account.**
+
+:::caution[Self-hosted Hikyaku]
+The published `n8n-nodes-hikyaku` package is pre-configured to connect to the **hosted** Hikyaku instance (`app.hikyaku.org`) — the Supabase project URL and OAuth client ID are baked into the build. If you're self-hosting Hikyaku, installing the npm package as-is will connect your n8n workflows to the hosted instance's data, not yours.
+
+Self-hosted users need to build their own copy against their own instance instead: complete [Supabase Setup → Enable the OAuth Server](../self-hosting/supabase#enable-the-oauth-server) first, then follow the "Setup" section of the [`hikyaku-n8n` README](https://github.com/hikyakuorg/hikyaku-n8n#setup) to set your own Supabase URL, anon key, and OAuth client ID before building and installing.
+:::
+
+## Install the Node
+
+1. In your n8n instance, go to **Settings → Community Nodes → Install**.
+2. Enter the package name: `n8n-nodes-hikyaku`.
+3. Check **"I understand the risks of installing unverified code from a public source"** and click **Install**.
+
+:::note
+Community nodes are unverified third-party code by n8n's own definition, and GUI installation applies to self-hosted n8n. If you're on n8n Cloud and don't see the Install option, check whether your plan allows unverified community packages.
+:::
+
+## Connect Your Account
+
+1. Add a **Hikyaku Delivery Status Trigger** (or either of the other two nodes) to a workflow.
+2. Under **Create workflow**, select **Create Credentials** → **Hikyaku OAuth2 API**.
+
+![Workflow List Screen](/img/n8n/n8n-workflows-list.png)
+![Create Workflow Menu](/img/n8n/n8n-create-workflow-menu.png)
+![Create Credentials Menu](/img/n8n/n8n-add-credential-modal.png)
+
+3. Click **Connect**, log in to Hikyaku, and approve the consent screen.
+
+![Hikyaku OAuth consent screen](/img/n8n/n8n-credential-not-connected.png)
+
+n8n stores the resulting token and refreshes it automatically. The token is a normal Supabase session scoped to your organisation, so every lookup these nodes make is subject to the same row-level security as the dashboard.
+
+![Hikyaku OAuth connected](/img/n8n/n8n-credential-connected.png)
+
+## Node References
+
+### Hikyaku Delivery Status Trigger
+
+Opens one Supabase Realtime connection per **activated** workflow, and fires the workflow the moment a package's delivery status changes. The node is designed to be resilient to connection drops, and will replay any missed events once it reconnects.
+
+- **Statuses**: multi-select, populated live from your `package_status` table. Leave empty to trigger on every status change.
+- **Output**: `id`, `from_customer`, `to_customer`, `warehouse_id`, `current_status` for the package whose status just changed.
+- If the connection drops, the node reconnects with backoff (5 attempts by default, capped at 30s apart) and replays anything it missed once resubscribed.
+
+### Hikyaku Get Customer
+
+- **Customer ID**:  defaults to `{{$json["from_customer"]}}`, so it drops in directly after the trigger.
+- **Output Field Prefix**:  defaults to `customer`. Adds `<prefix>_name`, `<prefix>_phone_number`, `<prefix>_email` to the item.
+- Add the node twice with different prefixes (e.g. `from_customer` and `to_customer`) to enrich both sides of a delivery in one workflow.
+
+### Hikyaku Get Package
+
+- **Package ID** — defaults to `{{$json["id"]}}`.
+- **Output Field Prefix** — defaults to `package`. Adds `<prefix>_weight_kg`, `<prefix>_height_cm`, `<prefix>_length_cm`, `<prefix>_tracking_number`, `<prefix>_status` to the item.
+
+## Example Workflows
+
+Each example below is also available as an importable `.json` file in [`hikyaku-n8n/examples`](https://github.com/HikyakuOrg/hikyaku-n8n/tree/main/examples). Import via **Workflows → Overflow Menu → Import from file** in n8n, then open each Hikyaku node and reconnect your own **Hikyaku OAuth2 API** credential. See [README](https://github.com/HikyakuOrg/hikyaku-n8n/blob/main/examples/README.md) for the full list and setup notes.
+![Empty Workflow](/img/n8n/n8n-workflow-empty-canvas.png)
+![Import Workflow Menu](/img/n8n/n8n-workflow-options-menu.png)
+
+### Example: an AI agent that answers tracking questions
+
+Because **Hikyaku Get Customer** and **Hikyaku Get Package** are both `usableAsTool`, you can skip wiring them into a fixed chain and instead attach them directly to an **AI Agent** node's tool list. Give the agent a prompt like "look up package and customer details to answer delivery questions," and it decides when to call each lookup based on the conversation. This is useful for a support-chatbot workflow that answers "where's my package" questions without a human touching Hikyaku directly.
+
+```mermaid
+flowchart LR
+  T["When chat message received"] --> AG["AI Agent<br/>system prompt: delivery support assistant"]
+  M["OpenAI Chat Model"] -.->|ai_languageModel| AG
+  P["Hikyaku Get Package<br/>packageId: fromAI(package_id)"] -.->|ai_tool| AG
+  C["Hikyaku Get Customer<br/>customerId: fromAI(customer_id)"] -.->|ai_tool| AG
+```
+
+1. **When chat message received** (Chat Trigger): starts the workflow when a user sends a message.
+2. **AI Agent**: system prompt instructs it to look up real data before answering, and to ask for a package/customer ID if it doesn't have one.
+3. **OpenAI Chat Model** (or any other Chat Model node): wired as the agent's language model.
+4. **Hikyaku Get Package** and **Hikyaku Get Customer**: wired as tools, with `packageId`/`customerId` bound via `$fromAI(...)` so the agent supplies the argument itself.
+
+![AI Agent with Hikyaku tools](/img//n8n/n8n-ai-tracking-assistant-workflow.png)
+
+### Example: notify a customer when their package is delivered
+
+```mermaid
+flowchart LR
+  A[Hikyaku Delivery Status Trigger<br/>Statuses: delivered] --> B[Hikyaku Get Customer<br/>Customer ID: to_customer<br/>Prefix: to_customer]
+  B --> C[Hikyaku Get Package<br/>Package ID: id<br/>Prefix: package]
+  C --> D[Slack / Email node<br/>message uses to_customer_name,<br/>package_tracking_number]
+```
+
+1. **Hikyaku Delivery Status Trigger**: set **Statuses** to `delivered` only.
+2. **Hikyaku Get Customer**: Customer ID `{{$json["to_customer"]}}`, prefix `to_customer`.
+3. **Hikyaku Get Package**: Package ID `{{$json["id"]}}`, prefix `package`.
+4. A **Slack**, **Email**, or **Twilio** node: compose the message from `{{$json["to_customer_name"]}}` and `{{$json["package_tracking_number"]}}`. The downloadable version below uses a generic **Send Email** node.
+
+
+### Example: log every status change for reporting
+
+```mermaid
+flowchart LR
+  A["Hikyaku Delivery Status Trigger<br/>Statuses: (none — every status)"] --> B["Append row in sheet<br/>Google Sheets: package_id, status,<br/>warehouse_id, logged_at"]
+```
+
+1. **Hikyaku Delivery Status Trigger**: leave **Statuses** empty so every change fires.
+2. A **Google Sheets** (Append Row) or **Postgres** (Insert) node: write `id`, `current_status`, `warehouse_id`, and n8n's own execution timestamp.
+
+This gives you a running audit trail of every status transition outside of Hikyaku itself, useful for dashboards or SLA reporting tools that don't talk to Hikyaku directly.
+
+
+### Example: escalate failed deliveries to dispatch
+
+```mermaid
+flowchart LR
+  A["Hikyaku Delivery Status Trigger<br/>Statuses: failed_delivery, returned"] --> B["Hikyaku Get Customer (from)<br/>Customer ID: from_customer<br/>Prefix: from_customer"]
+  B --> C["Hikyaku Get Customer (to)<br/>Customer ID: to_customer<br/>Prefix: to_customer"]
+  C --> D["Hikyaku Get Package<br/>Package ID: id<br/>Prefix: package"]
+  D --> E{"IF<br/>warehouse_id not empty"}
+  E -->|true| F["Alert Dispatch Team<br/>email to dispatch team"]
+```
+
+1. **Hikyaku Delivery Status Trigger**: set **Statuses** to whatever your exception states are (e.g. `failed_delivery`, `returned`).
+2. **Hikyaku Get Customer** (twice, prefixed `from_customer` and `to_customer`) and **Hikyaku Get Package**: pull in full context.
+3. An **IF** node: branch on anything you need (time of day, warehouse, etc.) — the downloadable version below checks that `warehouse_id` is set as a placeholder rule.
+4. A **Slack** or **email** node addressed to the dispatch team, with the enriched fields in the message.
+
+
+## Getting Help
+
+- **Issues and source** — [github.com/hikyakuorg/hikyaku-n8n](https://github.com/hikyakuorg/hikyaku-n8n)

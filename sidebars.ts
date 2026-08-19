@@ -32,7 +32,12 @@ const sidebars: SidebarsConfig = {
     },
     'security-and-access',
     'service-areas',
-    'dispatch-and-operations'
+    'dispatch-and-operations',
+    {
+      type: 'category',
+      label: 'Plugins',
+      items: ['plugins/n8n'],
+    },
   ],
 
   // But you can create a sidebar manually
