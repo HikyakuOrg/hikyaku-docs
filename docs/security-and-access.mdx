@@ -56,6 +56,14 @@ Permissions are named `resource.action` and grouped by resource in the picker, w
 3. Tick the permissions they need. **Do not skip this step** — see the warning above.
 4. Submit. They get an email invitation, and their access applies from their first sign-in.
 
+:::note[You can only grant permissions you hold yourself]
+
+This applies whether you add someone directly or send them an invitation. Ticking a permission you do not hold is refused. *You cannot grant permissions you do not hold* and nothing is created: no account, no invitation, no email.
+
+So a member with `team_members.add` can pass on any part of their own access, but cannot exceed it. To give someone access you do not have yourself, ask a full-permission account to add them.
+
+:::
+
 The person who created the organisation holds every permission. That is the account to keep safe.
 
 ## Starting points
@@ -100,5 +108,5 @@ Deactivating several people at once processes each one separately, so some can s
 
 - **Grant the narrowest useful action.** Someone who needs to see packages rarely needs to delete them.
 - **Keep two accounts with full permissions.** Full-permission accounts cannot be deactivated, but they can still be lost — a second one is your way back in.
-- **Treat `team_members.add` as your most sensitive permission.** Anyone holding it can create an account with more access than they have themselves.
+- **`team_members.add` still warrants care.** Holders cannot create an account with more access than they have themselves, but they can hand out every permission they do hold.
 - **Revisit access when someone changes job.** Changing their role does nothing on its own.
