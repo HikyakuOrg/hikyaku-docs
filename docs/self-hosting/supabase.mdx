@@ -13,7 +13,6 @@ Use this guide to bootstrap a fresh Supabase project for Hikyaku before starting
 ## Prerequisites
 
 - A Supabase account(either self hosted or on supabase.com)
-- Access to the local `schema` repository in this workspace
 - Your local or deployed Hikyaku app URLs
 
 ## Create a New Supabase Project
@@ -29,30 +28,6 @@ Use this guide to bootstrap a fresh Supabase project for Hikyaku before starting
 
 Hikyaku services use the same Supabase project for auth, storage, and the Postgres database, so keep these values available before moving on.
 
-## Bootstrap the Database Schema
-
-The `schema` repository in this workspace is the canonical database bootstrap source. Run the SQL files in this order against a fresh Supabase database:
-
-1. `schema/schema.sql`
-2. `schema/roles.sql`
-3. `schema/default_data.sql`
-
-That order matters:
-
-- `schema.sql` creates extensions, tables, functions, triggers, and policies
-- `roles.sql` applies role-level configuration
-- `default_data.sql` seeds required lookup data such as permissions, package statuses, and vehicle types
-
-### Running the bootstrap scripts
-
-The simplest option is **Supabase Dashboard -> SQL Editor**:
-
-1. Open `schema/schema.sql`, paste it into a new query, and run it.
-2. Repeat for `schema/roles.sql`.
-3. Repeat for `schema/default_data.sql`.
-
-If you prefer local tooling, run the same files in the same order with `psql` or your database client of choice. Do not start with `default_data.sql`; it depends on tables created by `schema.sql`.
-
 ## Configure Auth Providers
 
 Hikyaku already uses Supabase Auth for email/password sign-in and password recovery, and it includes an OTP confirmation route that also supports magic-link style flows.
@@ -61,7 +36,6 @@ In **Authentication -> Providers -> Email**:
 
 1. Enable the Email provider.
 2. Enable **Email + Password**.
-3. Enable **Magic Link** if you want passwordless sign-in or email-link onboarding.
 
 In **Authentication -> URL Configuration**:
 
@@ -93,9 +67,8 @@ Recommended bucket setup:
 
 After setup, confirm that:
 
-<InteractiveCheckbox label="The three schema bootstrap scripts ran successfully in order" />
 <InteractiveCheckbox label={<><code>app_permission</code>, <code>package_status</code>, and <code>vehicle_type</code> rows were seeded</>} />
-<InteractiveCheckbox label="Email auth is enabled" />
+<InteractiveCheckbox label="Auth is enabled" />
 <InteractiveCheckbox label="The required storage buckets exist" />
 
-Once those are in place, you can move on to the frontend, scheduler, and server setup docs.
+Once those are in place, you can move on to the web-frontend, server and spatial setup docs.

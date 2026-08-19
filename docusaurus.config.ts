@@ -104,23 +104,6 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'The relay route',
-          items: [
-            {
-              label: 'Get started',
-              to: '/',
-            },
-            {
-              label: 'Installation',
-              to: '/installation/supabase-setup',
-            },
-            {
-              label: 'Dispatch & operations',
-              to: '/dispatch-and-operations',
-            },
-          ],
-        },
-        {
           title: 'Community',
           items: [
             {

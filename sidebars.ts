@@ -20,7 +20,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Self-Hosting',
       items: [
-        'self-hosting/supabase-setup',
+        'self-hosting/supabase',
         'self-hosting/web-frontend',
       ],
     },
